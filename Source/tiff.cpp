@@ -10,47 +10,80 @@
 #define	CopyField3(tag, v1, v2, v3) \
     if (TIFFGetField(in, tag, &v1, &v2, &v3)) TIFFSetField(out, tag, v1, v2, v3)
 
-int tiffcp(TIFF *, TIFF *);
-int cpStrips(TIFF*, TIFF*);
-int cpTiles(TIFF*, TIFF*);
+static int cpStrips(TIFF *in, TIFF *out)
+{
+    tmsize_t bufsize = TIFFStripSize(in);
+	unsigned char *buf = (unsigned char *)_TIFFmalloc(bufsize);
 
-void dealStack(const fs::path &outdir, const fs::path &p) {
-	TIFF *in, *out;
+	if (buf) {
+		tstrip_t ns = TIFFNumberOfStrips(in);
+		uint64 *bytecounts;
 
-	// Open the file.
-	std::string path = p.string();
-	in = TIFFOpen(path.c_str(), "r");
-	if (in == NULL) {
-		std::cerr << "Unable to read " << p.filename() << std::endl;
-		return;
-	}
-
-	// Iterate through the directories.
-	int idx = 1;
-	do {
-		std::string sfname = std::string("layer_") + std::to_string(idx) + std::string(".tif");
-		fs::path pfname(sfname);
-		fs::path pfpath = outdir / pfname;
-		std::string sfpath = pfpath.string();
-
-		out = TIFFOpen(sfpath.c_str(), TIFFIsBigEndian(in) ? "wb" : "wl");
-		if (out == NULL) {
-			std::cerr << "Unable to create output file" << std::endl;
-			return;
-		} else if (!tiffcp(in, out)) {
-			std::cerr << "Unable to copy the layer" << std::endl;
-			return;
+		if (!TIFFGetField(in, TIFFTAG_STRIPBYTECOUNTS, &bytecounts)) {
+            std::cerr << "Strip bytes counts are missing" << std::endl;
+            _TIFFfree(buf);
+			return 0;
 		}
-		TIFFClose(out);
-
-		idx++;
-	} while (TIFFReadDirectory(in));
-
-	(void)TIFFClose(in);
+		for (tstript_t s = 0; s < ns; s++) {
+			if (bytecounts[s] > (uint64)bufsize) {
+				buf = (unsigned char *)_TIFFrealloc(buf,
+                                                    (tmsize_t)bytecounts[s]);
+				if (!buf) {
+					return 0;
+                }
+				bufsize = (tmsize_t)bytecounts[s];
+			}
+            // Copy the strip.
+			if ((TIFFReadRawStrip(in, s, buf, (tmsize_t)bytecounts[s]) < 0) ||
+			    (TIFFWriteRawStrip(out, s, buf, (tmsize_t)bytecounts[s]) < 0)) {
+				_TIFFfree(buf);
+				return 0;
+			}
+		}
+		_TIFFfree(buf);
+		return 1;
+	}
+	return 0;
 }
 
-int tiffcp(TIFF *in, TIFF *out) {
-	uint16 bitspersample, samplesperpixel, compression, shortv, *shortav;
+static int cpTiles(TIFF *in, TIFF *out)
+{
+    tmsize_t bufsize = TIFFTileSize(in);
+	unsigned char *buf = (unsigned char *)_TIFFmalloc(bufsize);
+
+	if (buf) {
+		ttile_t nt = TIFFNumberOfTiles(in);
+		uint64 *bytecounts;
+
+		if (!TIFFGetField(in, TIFFTAG_TILEBYTECOUNTS, &bytecounts)) {
+            std::cerr << "Tile bytes counts are missing" << std::endl;
+            _TIFFfree(buf);
+			return 0;
+		}
+		for (ttile_t t = 0; t < nt; t++) {
+			if (bytecounts[t] > (uint64) bufsize) {
+				buf = (unsigned char *)_TIFFrealloc(buf,
+                                                    (tmsize_t)bytecounts[t]);
+				if (!buf) {
+					return 0;
+                }
+				bufsize = (tmsize_t)bytecounts[t];
+			}
+            // Copy the tile.
+			if ((TIFFReadRawTile(in, t, buf, (tmsize_t)bytecounts[t]) < 0) ||
+			    (TIFFWriteRawTile(out, t, buf, (tmsize_t)bytecounts[t]) < 0)) {
+				_TIFFfree(buf);
+				return 0;
+			}
+		}
+		_TIFFfree(buf);
+		return 1;
+	}
+	return 0;
+}
+
+static int cpTiff(TIFF *in, TIFF *out) {
+    uint16 bitspersample, samplesperpixel, compression, shortv, *shortav;
 	uint32 w, l;
 	float floatv;
 	char *stringv;
@@ -65,15 +98,15 @@ int tiffcp(TIFF *in, TIFF *out) {
 	CopyField(TIFFTAG_SAMPLESPERPIXEL, samplesperpixel);
 	CopyField(TIFFTAG_COMPRESSION, compression);
 	if (compression == COMPRESSION_JPEG) {
-		uint16 count = 0;
+		uint32 count = 0;
 		void *table = NULL;
-		if (TIFFGetField(in, TIFFTAG_JPEGTABLES, &count, &table) && 
-			count > 0 && 
-			table) {
-			TIFFSetField(out, TIFFTAG_JPEGTABLES, count, table);
+		if (TIFFGetField(in, TIFFTAG_JPEGTABLES, &count, &table) &&
+            (count > 0) &&
+            (table != NULL)) {
+		    TIFFSetField(out, TIFFTAG_JPEGTABLES, count, table);
 		}
 	}
-	CopyField(TIFFTAG_PHOTOMETRIC, shortv);
+    CopyField(TIFFTAG_PHOTOMETRIC, shortv);
 	CopyField(TIFFTAG_PREDICTOR, shortv);
 	CopyField(TIFFTAG_THRESHHOLDING, shortv);
 	CopyField(TIFFTAG_FILLORDER, shortv);
@@ -91,15 +124,15 @@ int tiffcp(TIFF *in, TIFF *out) {
 	CopyField(TIFFTAG_YPOSITION, floatv);
 	CopyField(TIFFTAG_IMAGEDEPTH, longv);
 	CopyField(TIFFTAG_TILEDEPTH, longv);
-	CopyField(TIFFTAG_SAMPLEFORMAT, longv);
+	CopyField(TIFFTAG_SAMPLEFORMAT, shortv);
 	CopyField2(TIFFTAG_EXTRASAMPLES, shortv, shortav);
-	{ 
-		uint16 *red, *green, *blue;
-		CopyField3(TIFFTAG_COLORMAP, red, green, blue);
+	{
+        uint16 *red, *green, *blue;
+        CopyField3(TIFFTAG_COLORMAP, red, green, blue);
 	}
-	{ 
-		uint16 shortv2;
-		CopyField2(TIFFTAG_PAGENUMBER, shortv, shortv2);
+	{
+        uint16 shortv2;
+        CopyField2(TIFFTAG_PAGENUMBER, shortv, shortv2);
 	}
 	CopyField(TIFFTAG_ARTIST, stringv);
 	CopyField(TIFFTAG_IMAGEDESCRIPTION, stringv);
@@ -117,66 +150,50 @@ int tiffcp(TIFF *in, TIFF *out) {
 	CopyField(TIFFTAG_FAXRECVTIME, longv);
 	CopyField(TIFFTAG_FAXSUBADDRESS, stringv);
 	CopyField(TIFFTAG_FAXDCS, stringv);
-	if (TIFFIsTiled(in))
-		return (cpTiles(in, out));
-	else
-		return (cpStrips(in, out));
+	if (TIFFIsTiled(in)) {
+		return cpTiles(in, out);
+	} else {
+		return cpStrips(in, out);
+    }
 }
 
-int cpStrips(TIFF* in, TIFF* out)
-{
-	tsize_t bufsize = TIFFStripSize(in);
-	unsigned char *buf = (unsigned char *)_TIFFmalloc(bufsize);
-
-	if (buf) {
-		tstrip_t s, ns = TIFFNumberOfStrips(in);
-		uint32 *bytecounts;
-
-		TIFFGetField(in, TIFFTAG_STRIPBYTECOUNTS, &bytecounts);
-		for (s = 0; s < ns; s++) {
-			if (bytecounts[s] > (uint32)bufsize) {
-				buf = (unsigned char *)_TIFFrealloc(buf, bytecounts[s]);
-				if (!buf)
-					return (0);
-				bufsize = bytecounts[s];
-			}
-			if (TIFFReadRawStrip(in, s, buf, bytecounts[s]) < 0 ||
-				TIFFWriteRawStrip(out, s, buf, bytecounts[s]) < 0) {
-				_TIFFfree(buf);
-				return (0);
-			}
-		}
-		_TIFFfree(buf);
-		return (1);
-	}
-	return (0);
+std::string genPath(const fs::path &outdir, const std::string &prefix, const int index) {
+	return "";
 }
 
-int cpTiles(TIFF* in, TIFF* out)
-{
-	tsize_t bufsize = TIFFTileSize(in);
-	unsigned char *buf = (unsigned char *)_TIFFmalloc(bufsize);
+/*
+ * Deal the stacks into separated files and append them.
+ */
+void dealStack(const fs::path &outdir, const fs::path &p) {
+	TIFF *in, *out;
 
-	if (buf) {
-		ttile_t t, nt = TIFFNumberOfTiles(in);
-		uint32 *bytecounts;
-
-		TIFFGetField(in, TIFFTAG_TILEBYTECOUNTS, &bytecounts);
-		for (t = 0; t < nt; t++) {
-			if (bytecounts[t] >(uint32) bufsize) {
-				buf = (unsigned char *)_TIFFrealloc(buf, bytecounts[t]);
-				if (!buf)
-					return (0);
-				bufsize = bytecounts[t];
-			}
-			if (TIFFReadRawTile(in, t, buf, bytecounts[t]) < 0 ||
-				TIFFWriteRawTile(out, t, buf, bytecounts[t]) < 0) {
-				_TIFFfree(buf);
-				return (0);
-			}
-		}
-		_TIFFfree(buf);
-		return (1);
+	// Open the file.
+	in = TIFFOpen(p.string().c_str(), "r");
+	if (in == NULL) {
+		std::cerr << "Unable to read " << p.filename() << std::endl;
+		return;
 	}
-	return (0);
+
+	// Iterate through the directories.
+	int idx = 1;
+	do {
+		std::string sfname = std::string("layer_") + std::to_string(idx) + std::string(".tif");
+		fs::path pfname(sfname);
+		fs::path pfpath = outdir / pfname;
+		std::string sfpath = pfpath.string();
+
+		out = TIFFOpen(sfpath.c_str(), TIFFIsBigEndian(in) ? "wb" : "wl");
+		if (out == NULL) {
+			std::cerr << "Unable to create output file" << std::endl;
+			return;
+		} else if (!cpTiff(in, out)) {
+			std::cerr << "Unable to copy the layer" << std::endl;
+			return;
+		}
+		TIFFClose(out);
+
+		idx++;
+	} while (TIFFReadDirectory(in));
+
+	TIFFClose(in);
 }
