@@ -82,7 +82,7 @@ static int cpTiles(TIFF *in, TIFF *out)
 	return 0;
 }
 
-static int cpTiff(TIFF *in, TIFF *out) {
+static int cpTiff(TIFF *in, TIFF *out, const uint16 idx) {
     uint16 bitspersample, samplesperpixel, compression, shortv, *shortav;
 	uint32 w, l;
 	float floatv;
@@ -131,8 +131,9 @@ static int cpTiff(TIFF *in, TIFF *out) {
         CopyField3(TIFFTAG_COLORMAP, red, green, blue);
 	}
 	{
-        uint16 shortv2;
-        CopyField2(TIFFTAG_PAGENUMBER, shortv, shortv2);
+        //uint16 shortv2;
+        //CopyField2(TIFFTAG_PAGENUMBER, shortv, shortv2);
+        TIFFSetField(out, TIFFTAG_PAGENUMBER, idx, 0);
 	}
 	CopyField(TIFFTAG_ARTIST, stringv);
 	CopyField(TIFFTAG_IMAGEDESCRIPTION, stringv);
@@ -159,7 +160,7 @@ static int cpTiff(TIFF *in, TIFF *out) {
 
 std::string genPath(const fs::path &outdir, const std::string &prefix,
                     const int idx) {
-    fs::path fname(prefix + std::to_string(idx) + ".tif");
+    fs::path fname(prefix + std::to_string(idx+1) + ".tif");
     fs::path fpath = outdir / fname;
 	return fpath.string();
 }
@@ -184,21 +185,28 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
     mode[1] = (TIFFIsBigEndian(in)) ? 'b' : 'l';
 
 	// Iterate through the directories.
-	int idx = 1;
+    static uint16 layer = 0;
+	int idx = 0;
 	do {
         std::string s = genPath(outdir, prefix, idx);
 		out = TIFFOpen(s.c_str(), mode);
 		if (out == NULL) {
 			std::cerr << "Unable to create output file" << std::endl;
+            (void) TIFFClose(out)
 			return;
-		} else if (!cpTiff(in, out)) {
+		} else if (!cpTiff(in, out, layer) || !TIFFWriteDirectory(out)) {
 			std::cerr << "Unable to copy the layer" << std::endl;
+            (void) TIFFClose(in);
+            (void) TIFFClose(out);
 			return;
 		}
 		TIFFClose(out);
 
 		idx++;
 	} while (TIFFReadDirectory(in));
+
+    // Increment the layer variable for next write.
+    layer++;
 
 	TIFFClose(in);
 }
