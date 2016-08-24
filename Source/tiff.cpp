@@ -24,7 +24,7 @@ static int cpStrips(TIFF *in, TIFF *out)
             _TIFFfree(buf);
 			return 0;
 		}
-		for (tstript_t s = 0; s < ns; s++) {
+		for (tstrip_t s = 0; s < ns; s++) {
 			if (bytecounts[s] > (uint64)bufsize) {
 				buf = (unsigned char *)_TIFFrealloc(buf,
                                                     (tmsize_t)bytecounts[s]);
@@ -157,14 +157,18 @@ static int cpTiff(TIFF *in, TIFF *out) {
     }
 }
 
-std::string genPath(const fs::path &outdir, const std::string &prefix, const int index) {
-	return "";
+std::string genPath(const fs::path &outdir, const std::string &prefix,
+                    const int index) {
+    fs::path fname(prefix + std::to_string(idx) + ".tif");
+    fs::path fpath = outdir / fname;
+	return fpath.string();
 }
 
 /*
  * Deal the stacks into separated files and append them.
  */
-void dealStack(const fs::path &outdir, const fs::path &p) {
+void dealStack(const fs::path &outdir, const std::string &prefix,
+               const fs::path &p) {
 	TIFF *in, *out;
 
 	// Open the file.
@@ -174,15 +178,16 @@ void dealStack(const fs::path &outdir, const fs::path &p) {
 		return;
 	}
 
+    // Identify the read mode.
+    static char *mode = "xb";
+    mode[0] = (mode[0] == 'x') ? 'w' : 'a';
+    mode[1] = (TIFFIsBigEndian(in)) ? 'b' : 'l';
+
 	// Iterate through the directories.
 	int idx = 1;
 	do {
-		std::string sfname = std::string("layer_") + std::to_string(idx) + std::string(".tif");
-		fs::path pfname(sfname);
-		fs::path pfpath = outdir / pfname;
-		std::string sfpath = pfpath.string();
-
-		out = TIFFOpen(sfpath.c_str(), TIFFIsBigEndian(in) ? "wb" : "wl");
+        std::string s = genPath(outdir, prefix, idx);
+		out = TIFFOpen(s.c_str(), mode);
 		if (out == NULL) {
 			std::cerr << "Unable to create output file" << std::endl;
 			return;

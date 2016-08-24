@@ -23,9 +23,9 @@ int main(void) {
 		std::cout << "... " << rmCnt << " file(s) removed from the list" << std::endl;
 	}
 
-	//for (const fs::path &file : fileList) {
-		dealStack(outdir, fileList[0]);
-	//}
+	for (const fs::path &file : fileList) {
+		dealStack(outdir, file);
+	}
 
 	waitForKeypress();
 
