@@ -192,7 +192,8 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
 		out = TIFFOpen(s.c_str(), mode);
 		if (out == NULL) {
 			std::cerr << "Unable to create output file" << std::endl;
-            (void) TIFFClose(out)
+            (void) TIFFClose(in);
+            (void) TIFFClose(out);
 			return;
 		} else if (!cpTiff(in, out, layer) || !TIFFWriteDirectory(out)) {
 			std::cerr << "Unable to copy the layer" << std::endl;
