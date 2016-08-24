@@ -10,9 +10,9 @@
 #define	CopyField3(tag, v1, v2, v3) \
     if (TIFFGetField(in, tag, &v1, &v2, &v3)) TIFFSetField(out, tag, v1, v2, v3)
 
-static int tiffcp(TIFF *, TIFF *);
-static int cpStrips(TIFF*, TIFF*);
-static int cpTiles(TIFF*, TIFF*);
+int tiffcp(TIFF *, TIFF *);
+int cpStrips(TIFF*, TIFF*);
+int cpTiles(TIFF*, TIFF*);
 
 void dealStack(const fs::path &outdir, const fs::path &p) {
 	TIFF *in, *out;
@@ -49,7 +49,7 @@ void dealStack(const fs::path &outdir, const fs::path &p) {
 	(void)TIFFClose(in);
 }
 
-static int tiffcp(TIFF *in, TIFF *out) {
+int tiffcp(TIFF *in, TIFF *out) {
 	uint16 bitspersample, samplesperpixel, compression, shortv, *shortav;
 	uint32 w, l;
 	float floatv;
@@ -123,7 +123,7 @@ static int tiffcp(TIFF *in, TIFF *out) {
 		return (cpStrips(in, out));
 }
 
-static int cpStrips(TIFF* in, TIFF* out)
+int cpStrips(TIFF* in, TIFF* out)
 {
 	tsize_t bufsize = TIFFStripSize(in);
 	unsigned char *buf = (unsigned char *)_TIFFmalloc(bufsize);
@@ -134,7 +134,7 @@ static int cpStrips(TIFF* in, TIFF* out)
 
 		TIFFGetField(in, TIFFTAG_STRIPBYTECOUNTS, &bytecounts);
 		for (s = 0; s < ns; s++) {
-			if (bytecounts[s] >(uint32)bufsize) {
+			if (bytecounts[s] > (uint32)bufsize) {
 				buf = (unsigned char *)_TIFFrealloc(buf, bytecounts[s]);
 				if (!buf)
 					return (0);
@@ -152,7 +152,7 @@ static int cpStrips(TIFF* in, TIFF* out)
 	return (0);
 }
 
-static int cpTiles(TIFF* in, TIFF* out)
+int cpTiles(TIFF* in, TIFF* out)
 {
 	tsize_t bufsize = TIFFTileSize(in);
 	unsigned char *buf = (unsigned char *)_TIFFmalloc(bufsize);
