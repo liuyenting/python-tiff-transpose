@@ -1,8 +1,5 @@
 #include "stdafx.h"
 #include <conio.h>		// _kbhit
-#include <string>
-#include <algorithm>	// std::random_shuffle
-#include <random>		// std::default_random_engine
 
 #include "files.hpp"
 #include "tiff.hpp"
@@ -14,6 +11,7 @@ inline void waitForKeypress() {
 
 int main(void) {
 	fs::path p("G:\\dummy_cell");
+	fs::path outdir("G:\\dummy_cell_out");
 
 	std::cout << "Scanning " << p << "... ";
 	std::vector<fs::path> fileList;
@@ -25,9 +23,9 @@ int main(void) {
 		std::cout << "... " << rmCnt << " file(s) removed from the list" << std::endl;
 	}
 
-	for (const fs::path &file : fileList) {
-		dealStack(file);
-	}
+	//for (const fs::path &file : fileList) {
+		dealStack(outdir, fileList[0]);
+	//}
 
 	waitForKeypress();
 

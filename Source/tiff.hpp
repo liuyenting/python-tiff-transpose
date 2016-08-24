@@ -1,3 +1,3 @@
 #pragma once
 
-void dealStack(const fs::path &);
+void dealStack(const fs::path &, const fs::path &);

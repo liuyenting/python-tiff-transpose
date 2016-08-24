@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <string>
 #include <vector>
 
 #define BOOST_FILESYSTEM_VERSION 3
