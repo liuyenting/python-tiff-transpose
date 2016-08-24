@@ -179,7 +179,7 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
 	}
 
     // Identify the read mode.
-    static char mode[2] = "xb";
+	static char mode[3] = { 'x', 'b', 0 };
     mode[0] = (mode[0] == 'x') ? 'w' : 'a';
     mode[1] = (TIFFIsBigEndian(in)) ? 'b' : 'l';
 
