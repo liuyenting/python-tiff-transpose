@@ -158,7 +158,7 @@ static int cpTiff(TIFF *in, TIFF *out) {
 }
 
 std::string genPath(const fs::path &outdir, const std::string &prefix,
-                    const int index) {
+                    const int idx) {
     fs::path fname(prefix + std::to_string(idx) + ".tif");
     fs::path fpath = outdir / fname;
 	return fpath.string();
