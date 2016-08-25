@@ -3,12 +3,47 @@
 
 #include "tiff.hpp"
 
+static int ignore = false;		/* if true, ignore read errors */
+
 #define	CopyField(tag, v) \
     if (TIFFGetField(in, tag, &v)) TIFFSetField(out, tag, v)
 #define	CopyField2(tag, v1, v2) \
     if (TIFFGetField(in, tag, &v1, &v2)) TIFFSetField(out, tag, v1, v2)
 #define	CopyField3(tag, v1, v2, v3) \
     if (TIFFGetField(in, tag, &v1, &v2, &v3)) TIFFSetField(out, tag, v1, v2, v3)
+
+static int cpContig2ContigByRow(TIFF* in, TIFF* out,
+                                uint32 imagelength, uint32 imagewidth,
+                                tsample_t spp) {
+	tsize_t scSize = TIFFScanlineSize(in);
+	tdata_t buf;
+	uint32 row;
+
+	buf = _TIFFmalloc(scSize);
+	if (!buf)
+		return 0;
+	_TIFFmemset(buf, 0, scSize);
+	(void) imagewidth; (void) spp;
+	for (row = 0; row < imagelength; row++) {
+		if (TIFFReadScanline(in, buf, row, 0) < 0 && !ignore) {
+			TIFFError(TIFFFileName(in),
+				  "Error, can't read scanline %lu",
+				  (unsigned long) row);
+			goto bad;
+		}
+		if (TIFFWriteScanline(out, buf, row, 0) < 0) {
+			TIFFError(TIFFFileName(out),
+				  "Error, can't write scanline %lu",
+				  (unsigned long) row);
+			goto bad;
+		}
+	}
+	_TIFFfree(buf);
+	return 1;
+bad:
+	_TIFFfree(buf);
+	return 0;
+}
 
 int cpStrips(TIFF *in, TIFF *out)
 {
@@ -119,8 +154,7 @@ int cpTiff(TIFF *in, TIFF *out, const uint16 idx) {
 		return 0;
 	}
 
-    for (uint32_t j = 0; j < l; j++)
-        TIFFWriteScanline(out, )
+    return cpContig2ContigByRow(in, out, l, w, samplesperpixel);
 }
 
 std::string genPath(const fs::path &outdir, const std::string &prefix,
