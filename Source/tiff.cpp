@@ -254,6 +254,9 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
 	TIFF *in, *out;
     static uint16_t iLayer = 0;
 
+    // Suppress the warnings.
+	TIFFErrorHandler oldhandler = TIFFSetWarningHandler(NULL);
+
 	// Open the file.
 	in = TIFFOpen(imgPath.string().c_str(), "r");
 	if (in == NULL) {
@@ -298,4 +301,7 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
     iLayer++;
 
 	TIFFClose(in);
+
+    // Restore the warning.
+	TIFFSetWarningHandler(oldhandler);
 }
