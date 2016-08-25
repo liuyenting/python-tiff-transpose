@@ -33,7 +33,7 @@ static int cpContig2ContigByRow(TIFF *in, TIFF *out, uint32 nrow) {
                 std::cerr << "Cannot write scanline " << irow;
                 std::cerr << " to " << TIFFFileName(out) << std::endl;
             } else {
-                std::err << "Unknown error during row copy" << std::endl;
+                std::cerr << "Unknown error during row copy" << std::endl;
             }
             _TIFFfree(buf);
             return 0;
@@ -243,7 +243,7 @@ cpTiff(TIFF* in, TIFF* out, const unsigned short layer)
 	for (p = tags; p < &tags[NTAGS]; p++)
 		CopyTag(p->tag, p->count, p->type);
 
-	return cpContig2ContigByRow(in, out, length, width, samplesperpixel);
+	return cpContig2ContigByRow(in, out, length);
 }
 
 std::string genPath(const fs::path &outdir, const std::string &prefix,
