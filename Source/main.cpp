@@ -19,7 +19,6 @@ static void processFileList(std::vector<fs::path> &fileList,
 static void retrieveFileList(const fs::path& indir,
 							 std::vector<fs::path> &fileList) {
 	std::cout << "Scanning " << indir << "... ";
- 	std::vector<fs::path> fileList;
  	listTiffFiles(indir, fileList);
  	std::cout << fileList.size() << " stack(s) found" << std::endl;
 
@@ -33,6 +32,7 @@ int main(void) {
 	fs::path p("G:\\dummy_cell");
 	fs::path outdir("G:\\dummy_cell_out");
 
+	std::vector<fs::path> fileList;
 	// Transposed stack will contain as much layer as the amount of stacks.
  	size_t nLayer = fileList.size();
 	processFileList(fileList, static_cast<uint16_t>(nLayer));
