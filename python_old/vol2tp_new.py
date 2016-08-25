@@ -10,6 +10,7 @@ import os
 import sys
 import glob
 import re
+from libtiff import TIFFfile, TIFFimage
 
 # Pattern of the target sorting sequence, *_stackXXXXX_*
 seqPat = re.compile(r".*_stack([0-9]+)_.*")
@@ -19,20 +20,37 @@ def sortKey(it) :
     return int(mat.group(1))
 
 def listFiles(d) :
+    print('Search in "', d, '"...', sep='', end=' ')
+    
     targetPath = os.path.join(d, '*_stack*_*.tif*')
-    print('Search in "', targetPath, '"')
     lst = glob.glob(targetPath)
-    print(lst)
-    lst = lst.sort(key=sortKey)
-    print(lst)
+    # Sort the files according to the stack ID.
+    lst.sort(key=sortKey)
+    
+    print(len(lst), 'stacks found')    
     return lst
     
+def transposeInit(dname, fname, prefix) :
+    with TiffFile(fname) as tiff :
+        ti = tiff.asarray()
+        for pg in ti :
+            
+    ti = TIFFfile(fname)
+    samples, sample_names = tiff.get_samples()
+    # Create all the files by iterating through directories.
+    for idx, img in enumerate(ti) :
+        newfname = os.path.join(dname, prefix + str(idx))
+        to = TIFFimage(data, description='')
+        to = TIFF.open(newfname, 'w')
+        to.write_image(img)
+        to.close()
+    ti.close()
+        
 def transpose(indir, outdir, prefix) :
-    print('Input:  ', indir)
-    print('Output: ', outdir)
-    print('Prefix: ', prefix)
-    print('Files:  ', listFiles(indir))
-    print()
+    lst = listFiles(indir)
+    
+    transposeInit(indir, lst(0), prefix)
+    #for p in lst(1:) :
     
 def constructParser() :
     parser = argparse.ArgumentParser()
