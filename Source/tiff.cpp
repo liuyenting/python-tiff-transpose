@@ -148,7 +148,7 @@ static int cpTiff(TIFF* in, TIFF* out,
                   const uint16_t iLayer, const uint16_t nLayer)
 {
 	uint16_t bitspersample, samplesperpixel;
-	uint16_t compression, config, orientation;
+	uint16_t orientation;
 	uint32_t width, length, rowsperstrip;
 	struct cpTag* p;
 
@@ -156,7 +156,7 @@ static int cpTiff(TIFF* in, TIFF* out,
 	CopyField(TIFFTAG_IMAGELENGTH, length);
 	CopyField(TIFFTAG_BITSPERSAMPLE, bitspersample);
 	CopyField(TIFFTAG_SAMPLESPERPIXEL, samplesperpixel);
-	CopyField(TIFFTAG_COMPRESSION, compression);
+    CopyTag(TIFFTAG_COMPRESSION, 1, TIFF_SHORT);
 	CopyTag(TIFFTAG_PHOTOMETRIC, 1, TIFF_SHORT);
 	CopyTag(TIFFTAG_FILLORDER, 1, TIFF_SHORT);
 	/*
@@ -183,11 +183,6 @@ static int cpTiff(TIFF* in, TIFF* out,
 			break;
 	}
 	TIFFSetField(out, TIFFTAG_ORIENTATION, orientation);
-	/*
-	 * Choose tiles/strip for the output image according to
-	 * the command line arguments (-tiles, -strips) and the
-	 * structure of the input image.
-	 */
 	{
 		/*
 		 * RowsPerStrip is left unspecified: use either the
@@ -202,7 +197,7 @@ static int cpTiff(TIFF* in, TIFF* out,
         }
 		TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, rowsperstrip);
 	}
-	CopyField(TIFFTAG_PLANARCONFIG, config);
+    CopyTag(TIFFTAG_PLANARCONFIG, 1, TIFF_SHORT);
 	if (samplesperpixel <= 4)
 		CopyTag(TIFFTAG_TRANSFERFUNCTION, 4, TIFF_SHORT);
 	CopyTag(TIFFTAG_COLORMAP, 4, TIFF_SHORT);
