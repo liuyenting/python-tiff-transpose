@@ -9,15 +9,13 @@
 #define ERR_SHOW false
 #endif
 
-static int cpContig2ContigByRow(TIFF *in, TIFF *out, uint32 nrow) {
+static int cpContig2ContigByRow(TIFF *in, TIFF *out, uint32_t nrow) {
 	tsize_t scSize = TIFFScanlineSize(in);
-	tdata_t buf;
-
-	buf = _TIFFmalloc(scSize);
+	tdata_t buf = _TIFFmalloc(scSize);
 	if (!buf)
 		return 0;
 	_TIFFmemset(buf, 0, scSize);
-	for (uint32 irow = 0; irow < nrow; irow++) {
+	for (uint32_t irow = 0; irow < nrow; irow++) {
         try {
     		if (TIFFReadScanline(in, buf, irow, 0) < 0) {
     			throw -1;
@@ -44,36 +42,39 @@ static int cpContig2ContigByRow(TIFF *in, TIFF *out, uint32 nrow) {
 }
 
 #define	CopyField(tag, v) \
-    if (TIFFGetField(in, tag, &v)) TIFFSetField(out, tag, v)
+    if (TIFFGetField(in, tag, &v)) \
+        TIFFSetField(out, tag, v)
 #define	CopyField2(tag, v1, v2) \
-    if (TIFFGetField(in, tag, &v1, &v2)) TIFFSetField(out, tag, v1, v2)
+    if (TIFFGetField(in, tag, &v1, &v2)) \
+        TIFFSetField(out, tag, v1, v2)
 #define	CopyField3(tag, v1, v2, v3) \
-    if (TIFFGetField(in, tag, &v1, &v2, &v3)) TIFFSetField(out, tag, v1, v2, v3)
+    if (TIFFGetField(in, tag, &v1, &v2, &v3)) \
+        TIFFSetField(out, tag, v1, v2, v3)
 #define	CopyField4(tag, v1, v2, v3, v4) \
-    if (TIFFGetField(in, tag, &v1, &v2, &v3, &v4)) TIFFSetField(out, tag, v1, v2, v3, v4)
+    if (TIFFGetField(in, tag, &v1, &v2, &v3, &v4)) \
+        TIFFSetField(out, tag, v1, v2, v3, v4)
 
-static void
-cpTag(TIFF* in, TIFF* out, uint16 tag, uint16 count, TIFFDataType type)
-{
+static void cpTag(TIFF* in, TIFF* out,
+                  uint16_t tag, uint16_t count, TIFFDataType type) {
 	switch (type) {
 	case TIFF_SHORT:
 		if (count == 1) {
-			uint16 shortv;
+			uint16_t shortv;
 			CopyField(tag, shortv);
 		} else if (count == 2) {
-			uint16 shortv1, shortv2;
+			uint16_t shortv1, shortv2;
 			CopyField2(tag, shortv1, shortv2);
 		} else if (count == 4) {
-			uint16 *tr, *tg, *tb, *ta;
+			uint16_t *tr, *tg, *tb, *ta;
 			CopyField4(tag, tr, tg, tb, ta);
-		} else if (count == (uint16) -1) {
-			uint16 shortv1;
-			uint16* shortav;
+		} else if (count == (uint16_t) -1) {
+			uint16_t shortv1;
+			uint16_t* shortav;
 			CopyField2(tag, shortv1, shortav);
 		}
 		break;
 	case TIFF_LONG:
-		{ uint32 longv;
+		{ uint32_t longv;
 		  CopyField(tag, longv);
 		}
 		break;
@@ -81,7 +82,7 @@ cpTag(TIFF* in, TIFF* out, uint16 tag, uint16 count, TIFFDataType type)
 		if (count == 1) {
 			float floatv;
 			CopyField(tag, floatv);
-		} else if (count == (uint16) -1) {
+		} else if (count == (uint16_t) -1) {
 			float* floatav;
 			CopyField(tag, floatav);
 		}
@@ -95,7 +96,7 @@ cpTag(TIFF* in, TIFF* out, uint16 tag, uint16 count, TIFFDataType type)
 		if (count == 1) {
 			double doublev;
 			CopyField(tag, doublev);
-		} else if (count == (uint16) -1) {
+		} else if (count == (uint16_t) -1) {
 			double* doubleav;
 			CopyField(tag, doubleav);
 		}
@@ -108,8 +109,8 @@ cpTag(TIFF* in, TIFF* out, uint16 tag, uint16 count, TIFFDataType type)
 }
 
 static struct cpTag {
-	uint16 tag;
-	uint16 count;
+	uint16_t tag;
+	uint16_t count;
 	TIFFDataType type;
 } tags[] = {
 	{ TIFFTAG_SUBFILETYPE,		1, TIFF_LONG },
@@ -130,18 +131,18 @@ static struct cpTag {
 	{ TIFFTAG_DATETIME,		1, TIFF_ASCII },
 	{ TIFFTAG_ARTIST,		1, TIFF_ASCII },
 	{ TIFFTAG_HOSTCOMPUTER,		1, TIFF_ASCII },
-	{ TIFFTAG_WHITEPOINT,		(uint16) -1, TIFF_RATIONAL },
-	{ TIFFTAG_PRIMARYCHROMATICITIES,(uint16) -1,TIFF_RATIONAL },
+	{ TIFFTAG_WHITEPOINT,		(uint16_t) -1, TIFF_RATIONAL },
+	{ TIFFTAG_PRIMARYCHROMATICITIES,(uint16_t) -1,TIFF_RATIONAL },
 	{ TIFFTAG_HALFTONEHINTS,	2, TIFF_SHORT },
 	{ TIFFTAG_INKSET,		1, TIFF_SHORT },
 	{ TIFFTAG_DOTRANGE,		2, TIFF_SHORT },
 	{ TIFFTAG_TARGETPRINTER,	1, TIFF_ASCII },
 	{ TIFFTAG_SAMPLEFORMAT,		1, TIFF_SHORT },
-	{ TIFFTAG_YCBCRCOEFFICIENTS,	(uint16) -1,TIFF_RATIONAL },
+	{ TIFFTAG_YCBCRCOEFFICIENTS,	(uint16_t) -1,TIFF_RATIONAL },
 	{ TIFFTAG_YCBCRSUBSAMPLING,	2, TIFF_SHORT },
 	{ TIFFTAG_YCBCRPOSITIONING,	1, TIFF_SHORT },
-	{ TIFFTAG_REFERENCEBLACKWHITE,	(uint16) -1,TIFF_RATIONAL },
-	{ TIFFTAG_EXTRASAMPLES,		(uint16) -1, TIFF_SHORT },
+	{ TIFFTAG_REFERENCEBLACKWHITE,	(uint16_t) -1,TIFF_RATIONAL },
+	{ TIFFTAG_EXTRASAMPLES,		(uint16_t) -1, TIFF_SHORT },
 	{ TIFFTAG_SMINSAMPLEVALUE,	1, TIFF_DOUBLE },
 	{ TIFFTAG_SMAXSAMPLEVALUE,	1, TIFF_DOUBLE },
 	{ TIFFTAG_STONITS,		1, TIFF_DOUBLE },
@@ -151,11 +152,11 @@ static struct cpTag {
 #define	CopyTag(tag, count, type)	cpTag(in, out, tag, count, type)
 
 static int
-cpTiff(TIFF* in, TIFF* out, const unsigned short layer)
+cpTiff(TIFF* in, TIFF* out, const uint16_t layer)
 {
-	uint16 bitspersample, samplesperpixel;
-	uint16 compression, config, orientation;
-	uint32 width, length, rowsperstrip;
+	uint16_t bitspersample, samplesperpixel;
+	uint16_t compression, config, orientation;
+	uint32_t width, length, rowsperstrip;
 	struct cpTag* p;
 
 	CopyField(TIFFTAG_IMAGEWIDTH, width);
@@ -203,7 +204,7 @@ cpTiff(TIFF* in, TIFF* out, const unsigned short layer)
 		if (!TIFFGetField(in, TIFFTAG_ROWSPERSTRIP, &rowsperstrip)) {
 			rowsperstrip = TIFFDefaultStripSize(out, rowsperstrip);
 		}
-		if (rowsperstrip > length && rowsperstrip != (uint32)-1) {
+		if (rowsperstrip > length && rowsperstrip != (uint32_t)-1) {
 			rowsperstrip = length;
         }
 		TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, rowsperstrip);
@@ -213,13 +214,13 @@ cpTiff(TIFF* in, TIFF* out, const unsigned short layer)
 		CopyTag(TIFFTAG_TRANSFERFUNCTION, 4, TIFF_SHORT);
 	CopyTag(TIFFTAG_COLORMAP, 4, TIFF_SHORT);
 	{
-		uint32 len32;
+		uint32_t len32;
 		void** data;
 		if (TIFFGetField(in, TIFFTAG_ICCPROFILE, &len32, &data))
 			TIFFSetField(out, TIFFTAG_ICCPROFILE, len32, data);
 	}
 	{
-		uint16 ninks;
+		uint16_t ninks;
 		const char* inknames;
 		if (TIFFGetField(in, TIFFTAG_NUMBEROFINKS, &ninks)) {
 			TIFFSetField(out, TIFFTAG_NUMBEROFINKS, ninks);
@@ -257,14 +258,15 @@ std::string genPath(const fs::path &outdir, const std::string &prefix,
  * Deal the stacks into separated files and append them.
  */
 void dealStack(const fs::path &outdir, const std::string &prefix,
-               const fs::path &p) {
+               const fs::path &imgPath,
+               const size_t nLayer) {
 	TIFF *in, *out;
-    static unsigned short layer = 0;
+    static unsigned short iLayer = 0;
 
 	// Open the file.
-	in = TIFFOpen(p.string().c_str(), "r");
+	in = TIFFOpen(imgPath.string().c_str(), "r");
 	if (in == NULL) {
-		std::cerr << "Unable to read " << p.filename() << std::endl;
+		std::cerr << "Unable to read " << imgPath.filename() << std::endl;
 		return;
 	}
 
@@ -273,32 +275,32 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
     mode[0] = (mode[0] == 'x') ? 'w' : 'a';
     mode[1] = (TIFFIsBigEndian(in)) ? 'b' : 'l';
 
-    std::cout << "Layer " << layer << ", ";
+    std::cout << "Layer " << iLayer << ", ";
     std::cout << ((mode[0] == 'a') ? "Append" : "Overwrite") << std::endl;
 
 	// Iterate through the directories.
-	int idx = 0;
+	int iFile = 0;
 	do {
-        std::string s = genPath(outdir, prefix, idx);
+        std::string s = genPath(outdir, prefix, iFile);
 		out = TIFFOpen(s.c_str(), mode);
 		if (out == NULL) {
 			std::cerr << "Unable to create output file" << std::endl;
             (void) TIFFClose(in);
             (void) TIFFClose(out);
 			return;
-		} else if (!cpTiff(in, out, layer)) {
+		} else if (!cpTiff(in, out,
+                           iLayer, reinterpret_cast<uint16_t>(nLayer))) {
 			std::cerr << "Unable to copy the layer" << std::endl;
             (void) TIFFClose(in);
             (void) TIFFClose(out);
 			return;
 		}
 		TIFFClose(out);
-
-		idx++;
+		iFile++;
 	} while (TIFFReadDirectory(in));
 
     // Increment the layer variable for next write.
-    layer++;
+    iLayer++;
 
 	TIFFClose(in);
 }

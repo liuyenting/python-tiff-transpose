@@ -16,6 +16,8 @@ int main(void) {
 	std::cout << "Scanning " << p << "... ";
 	std::vector<fs::path> fileList;
 	listTiffFiles(p, fileList);
+	// Transposed stack will contain as much layer as the amount of stacks.
+	size_t nLayer = fileList.size();
 	std::cout << fileList.size() << " stack(s) found" << std::endl;
 
 	int rmCnt = sortSpimStacks(fileList);
@@ -24,7 +26,7 @@ int main(void) {
 	}
 
 	for (const fs::path &file : fileList) {
-		dealStack(outdir, "layer_", file);
+		dealStack(outdir, "layer_", file, nLayer);
 	}
 
 	waitForKeypress();
