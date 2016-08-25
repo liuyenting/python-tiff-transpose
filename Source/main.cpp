@@ -1,6 +1,12 @@
 #include "stdafx.h"
 #include <conio.h>		// _kbhit
-#include <boost/progress.hpp>
+
+#include <boost/timer/timer.hpp>
+namespace tmr = boost::timer;
+#include <boost/chrono.hpp>
+namespace chr = boost::chrono;
+typedef chr::duration<double> unitsec;
+#include <boost/format.hpp>
 
 #include "files.hpp"
 #include "tiff.hpp"
@@ -13,11 +19,25 @@ inline void waitForKeypress() {
 static void processFileList(std::vector<fs::path> &fileList,
 						    const fs::path &outDir,
 						    const uint16_t nLayer) {
-	boost::progress_display show_progress(fileList.size());
+	std::cout << std::endl;
+
+	tmr::cpu_timer timer;
+	tmr::nanosecond_type last(0);
+	uint16_t iLayer = 0;
 	for (const fs::path &file : fileList) {
 		dealStack(outDir, "layer_", file, nLayer);
-		++show_progress;
+		iLayer++;
+
+		unitsec sec = chr::nanoseconds(timer.elapsed().user +
+									   timer.elapsed().system);
+
+		// Print new status.
+		std::cout << boost::format("%.2f%%, %.2f seconds elapsed") %
+					 (static_cast<float>(iLayer)/nLayer * 100) %
+					 sec.count() << std::endl;
 	}
+
+	std::cout << std::endl;
 }
 
 static void retrieveFileList(std::vector<fs::path> &fileList,
