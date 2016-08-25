@@ -3,39 +3,44 @@
 
 #include "tiff.hpp"
 
-static int ignore = false;		/* if true, ignore read errors */
+#ifdef DEBUG
+#define ERR_SHOW true
+#else
+#define ERR_SHOW false
+#endif
 
-static int cpContig2ContigByRow(TIFF* in, TIFF* out,
-                                uint32 imagelength, uint32 imagewidth,
-                                tsample_t spp) {
+static int cpContig2ContigByRow(TIFF *in, TIFF *out, uint32 nrow) {
 	tsize_t scSize = TIFFScanlineSize(in);
 	tdata_t buf;
-	uint32 row;
 
 	buf = _TIFFmalloc(scSize);
 	if (!buf)
 		return 0;
 	_TIFFmemset(buf, 0, scSize);
-	(void) imagewidth; (void) spp;
-	for (row = 0; row < imagelength; row++) {
-		if (TIFFReadScanline(in, buf, row, 0) < 0 && !ignore) {
-			TIFFError(TIFFFileName(in),
-				  "Error, can't read scanline %lu",
-				  (unsigned long) row);
-			goto bad;
-		}
-		if (TIFFWriteScanline(out, buf, row, 0) < 0) {
-			TIFFError(TIFFFileName(out),
-				  "Error, can't write scanline %lu",
-				  (unsigned long) row);
-			goto bad;
-		}
+	for (uint32 irow = 0; irow < nrow; irow++) {
+        try {
+    		if (TIFFReadScanline(in, buf, irow, 0) < 0) {
+    			throw -1;
+    		}
+    		if (TIFFWriteScanline(out, buf, irow, 0) < 0) {
+    			throw -2;
+    		}
+        } catch (int err) {
+            if (err == -1) {
+                std::cerr << "Cannot read scanline " << irow;
+                std::cerr << " from " << TIFFFileName(in) << std::endl;
+            } else if (err == -2) {
+                std::cerr << "Cannot write scanline " << irow;
+                std::cerr << " to " << TIFFFileName(out) << std::endl;
+            } else {
+                std::err << "Unknown error during row copy" << std::endl;
+            }
+            _TIFFfree(buf);
+            return 0;
+        }
 	}
 	_TIFFfree(buf);
 	return 1;
-bad:
-	_TIFFfree(buf);
-	return 0;
 }
 
 #define	CopyField(tag, v) \
