@@ -9,7 +9,7 @@
 #define ERR_SHOW false
 #endif
 
-static int cpContig2ContigByRow(TIFF *in, TIFF *out, uint32_t nrow) {
+static int cpData(TIFF *in, TIFF *out, uint32_t nrow) {
 	tsize_t scSize = TIFFScanlineSize(in);
 	tdata_t buf = _TIFFmalloc(scSize);
 	if (!buf)
@@ -67,69 +67,67 @@ static void cpTag(TIFF* in, TIFF* out,
 		} else if (count == 4) {
 			uint16_t *tr, *tg, *tb, *ta;
 			CopyField4(tag, tr, tg, tb, ta);
-		} else if (count == (uint16_t) -1) {
+		} else if (count == (uint16_t)(-1)) {
 			uint16_t shortv1;
 			uint16_t* shortav;
 			CopyField2(tag, shortv1, shortav);
 		}
 		break;
 	case TIFF_LONG:
-		{ uint32_t longv;
-		  CopyField(tag, longv);
-		}
+		uint32_t longv;
+		CopyField(tag, longv);
 		break;
 	case TIFF_RATIONAL:
 		if (count == 1) {
 			float floatv;
 			CopyField(tag, floatv);
-		} else if (count == (uint16_t) -1) {
+		} else if (count == (uint16_t)(-1)) {
 			float* floatav;
 			CopyField(tag, floatav);
 		}
 		break;
 	case TIFF_ASCII:
-		{ char* stringv;
-		  CopyField(tag, stringv);
-		}
+		char* stringv;
+		CopyField(tag, stringv);
 		break;
 	case TIFF_DOUBLE:
 		if (count == 1) {
 			double doublev;
 			CopyField(tag, doublev);
-		} else if (count == (uint16_t) -1) {
+		} else if (count == (uint16_t)(-1)) {
 			double* doubleav;
 			CopyField(tag, doubleav);
 		}
 		break;
 	default:
-		TIFFError(TIFFFileName(in),
-		    "Data type %d is not supported, tag %d skipped.",
-		    tag, type);
+        std::cerr << "Data type " << type << " is not supported, ";
+        std::cerr << "tag " << tag << "skipped" << std::endl;
 	}
 }
+#define	CopyTag(tag, count, type) cpTag(in, out, tag, count, type)
 
 static struct cpTag {
 	uint16_t tag;
 	uint16_t count;
 	TIFFDataType type;
 } tags[] = {
-	{ TIFFTAG_SUBFILETYPE,		1, TIFF_LONG },
+	{ TIFFTAG_SUBFILETYPE,		1, TIFF_LONG  },
 	{ TIFFTAG_THRESHHOLDING,	1, TIFF_SHORT },
 	{ TIFFTAG_DOCUMENTNAME,		1, TIFF_ASCII },
 	{ TIFFTAG_IMAGEDESCRIPTION,	1, TIFF_ASCII },
-	{ TIFFTAG_MAKE,			1, TIFF_ASCII },
-	{ TIFFTAG_MODEL,		1, TIFF_ASCII },
+	{ TIFFTAG_MAKE,			    1, TIFF_ASCII },
+	{ TIFFTAG_MODEL,		    1, TIFF_ASCII },
 	{ TIFFTAG_MINSAMPLEVALUE,	1, TIFF_SHORT },
 	{ TIFFTAG_MAXSAMPLEVALUE,	1, TIFF_SHORT },
 	{ TIFFTAG_XRESOLUTION,		1, TIFF_RATIONAL },
 	{ TIFFTAG_YRESOLUTION,		1, TIFF_RATIONAL },
-	{ TIFFTAG_PAGENAME,		1, TIFF_ASCII },
+	{ TIFFTAG_PAGENAME,		    1, TIFF_ASCII },
 	{ TIFFTAG_XPOSITION,		1, TIFF_RATIONAL },
 	{ TIFFTAG_YPOSITION,		1, TIFF_RATIONAL },
 	{ TIFFTAG_RESOLUTIONUNIT,	1, TIFF_SHORT },
-	{ TIFFTAG_SOFTWARE,		1, TIFF_ASCII },
-	{ TIFFTAG_DATETIME,		1, TIFF_ASCII },
-	{ TIFFTAG_ARTIST,		1, TIFF_ASCII },
+	{ TIFFTAG_SOFTWARE,		    1, TIFF_ASCII },
+	{ TIFFTAG_DATETIME,		    1, TIFF_ASCII },
+	{ TIFFTAG_ARTIST,		    1, TIFF_ASCII },
 	{ TIFFTAG_HOSTCOMPUTER,		1, TIFF_ASCII },
 	{ TIFFTAG_WHITEPOINT,		(uint16_t) -1, TIFF_RATIONAL },
 	{ TIFFTAG_PRIMARYCHROMATICITIES,(uint16_t) -1,TIFF_RATIONAL },
@@ -138,21 +136,16 @@ static struct cpTag {
 	{ TIFFTAG_DOTRANGE,		2, TIFF_SHORT },
 	{ TIFFTAG_TARGETPRINTER,	1, TIFF_ASCII },
 	{ TIFFTAG_SAMPLEFORMAT,		1, TIFF_SHORT },
-	{ TIFFTAG_YCBCRCOEFFICIENTS,	(uint16_t) -1,TIFF_RATIONAL },
-	{ TIFFTAG_YCBCRSUBSAMPLING,	2, TIFF_SHORT },
-	{ TIFFTAG_YCBCRPOSITIONING,	1, TIFF_SHORT },
-	{ TIFFTAG_REFERENCEBLACKWHITE,	(uint16_t) -1,TIFF_RATIONAL },
-	{ TIFFTAG_EXTRASAMPLES,		(uint16_t) -1, TIFF_SHORT },
+	{ TIFFTAG_REFERENCEBLACKWHITE,	(uint16_t)(-1),TIFF_RATIONAL },
+	{ TIFFTAG_EXTRASAMPLES,		(uint16_t)(-1), TIFF_SHORT },
 	{ TIFFTAG_SMINSAMPLEVALUE,	1, TIFF_DOUBLE },
 	{ TIFFTAG_SMAXSAMPLEVALUE,	1, TIFF_DOUBLE },
 	{ TIFFTAG_STONITS,		1, TIFF_DOUBLE },
 };
-#define	NTAGS	(sizeof (tags) / sizeof (tags[0]))
+#define	NTAGS (sizeof(tags) / sizeof(tags[0]))
 
-#define	CopyTag(tag, count, type)	cpTag(in, out, tag, count, type)
-
-static int
-cpTiff(TIFF* in, TIFF* out, const uint16_t iLayer, const uint16_t nLayer)
+static int cpTiff(TIFF* in, TIFF* out,
+                  const uint16_t iLayer, const uint16_t nLayer)
 {
 	uint16_t bitspersample, samplesperpixel;
 	uint16_t compression, config, orientation;
@@ -166,35 +159,7 @@ cpTiff(TIFF* in, TIFF* out, const uint16_t iLayer, const uint16_t nLayer)
 	CopyField(TIFFTAG_COMPRESSION, compression);
 	CopyTag(TIFFTAG_PHOTOMETRIC, 1, TIFF_SHORT);
 	CopyTag(TIFFTAG_FILLORDER, 1, TIFF_SHORT);
-	/*
-	 * Will copy `Orientation' tag from input image
-	 */
-	TIFFGetFieldDefaulted(in, TIFFTAG_ORIENTATION, &orientation);
-	switch (orientation) {
-		case ORIENTATION_BOTRIGHT:
-		case ORIENTATION_RIGHTBOT:	/* XXX */
-			TIFFWarning(TIFFFileName(in), "using bottom-left orientation");
-			orientation = ORIENTATION_BOTLEFT;
-		/* fall thru... */
-		case ORIENTATION_LEFTBOT:	/* XXX */
-		case ORIENTATION_BOTLEFT:
-			break;
-		case ORIENTATION_TOPRIGHT:
-		case ORIENTATION_RIGHTTOP:	/* XXX */
-		default:
-			TIFFWarning(TIFFFileName(in), "using top-left orientation");
-			orientation = ORIENTATION_TOPLEFT;
-		/* fall thru... */
-		case ORIENTATION_LEFTTOP:	/* XXX */
-		case ORIENTATION_TOPLEFT:
-			break;
-	}
-	TIFFSetField(out, TIFFTAG_ORIENTATION, orientation);
-	/*
-	 * Choose tiles/strip for the output image according to
-	 * the command line arguments (-tiles, -strips) and the
-	 * structure of the input image.
-	 */
+    CopyTag(TIFFTAG_ORIENTATION, 1, TIFF_SHORT);
 	{
 		/*
 		 * RowsPerStrip is left unspecified: use either the
@@ -229,22 +194,21 @@ cpTiff(TIFF* in, TIFF* out, const uint16_t iLayer, const uint16_t nLayer)
 				const char* cp = inknames;
 				while (ninks > 1) {
 					cp = strchr(cp, '\0');
-                                        cp++;
-                                        inknameslen += (strlen(cp) + 1);
+                    cp++;
+                    inknameslen += (strlen(cp) + 1);
 					ninks--;
 				}
 				TIFFSetField(out, TIFFTAG_INKNAMES, inknameslen, inknames);
 			}
 		}
 	}
-	{
-		TIFFSetField(out, TIFFTAG_PAGENUMBER, iLayer, nLayer);
-	}
+    // Set the page number.
+	TIFFSetField(out, TIFFTAG_PAGENUMBER, iLayer, nLayer);
 
 	for (p = tags; p < &tags[NTAGS]; p++)
 		CopyTag(p->tag, p->count, p->type);
 
-	return cpContig2ContigByRow(in, out, length);
+	return cpData(in, out, length);
 }
 
 std::string genPath(const fs::path &outdir, const std::string &prefix,
