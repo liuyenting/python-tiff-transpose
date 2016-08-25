@@ -152,7 +152,7 @@ static struct cpTag {
 #define	CopyTag(tag, count, type)	cpTag(in, out, tag, count, type)
 
 static int
-cpTiff(TIFF* in, TIFF* out, const uint16_t iLayer, const uint16_t, nLayer)
+cpTiff(TIFF* in, TIFF* out, const uint16_t iLayer, const uint16_t nLayer)
 {
 	uint16_t bitspersample, samplesperpixel;
 	uint16_t compression, config, orientation;
