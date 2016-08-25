@@ -5,4 +5,4 @@
  */
 void dealStack(const fs::path &, const std::string &, 
 			   const fs::path &, 
-			   const size_t);
+			   const uint16_t);

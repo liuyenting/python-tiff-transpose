@@ -152,7 +152,7 @@ static struct cpTag {
 #define	CopyTag(tag, count, type)	cpTag(in, out, tag, count, type)
 
 static int
-cpTiff(TIFF* in, TIFF* out, const uint16_t layer)
+cpTiff(TIFF* in, TIFF* out, const uint16_t iLayer, const uint16_t, nLayer)
 {
 	uint16_t bitspersample, samplesperpixel;
 	uint16_t compression, config, orientation;
@@ -238,7 +238,7 @@ cpTiff(TIFF* in, TIFF* out, const uint16_t layer)
 		}
 	}
 	{
-		TIFFSetField(out, TIFFTAG_PAGENUMBER, layer, 0);
+		TIFFSetField(out, TIFFTAG_PAGENUMBER, iLayer, nLayer);
 	}
 
 	for (p = tags; p < &tags[NTAGS]; p++)
@@ -259,7 +259,7 @@ std::string genPath(const fs::path &outdir, const std::string &prefix,
  */
 void dealStack(const fs::path &outdir, const std::string &prefix,
                const fs::path &imgPath,
-               const size_t nLayer) {
+               const uint16_t nLayer) {
 	TIFF *in, *out;
     static unsigned short iLayer = 0;
 
@@ -288,8 +288,7 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
             (void) TIFFClose(in);
             (void) TIFFClose(out);
 			return;
-		} else if (!cpTiff(in, out,
-                           iLayer, reinterpret_cast<uint16_t>(nLayer))) {
+		} else if (!cpTiff(in, out, iLayer, nLayer)) {
 			std::cerr << "Unable to copy the layer" << std::endl;
             (void) TIFFClose(in);
             (void) TIFFClose(out);

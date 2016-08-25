@@ -26,7 +26,7 @@ int main(void) {
 	}
 
 	for (const fs::path &file : fileList) {
-		dealStack(outdir, "layer_", file, nLayer);
+		dealStack(outdir, "layer_", file, static_cast<uint16_t>(nLayer));
 	}
 
 	waitForKeypress();

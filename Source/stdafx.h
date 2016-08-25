@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 #define BOOST_FILESYSTEM_VERSION 3
 
