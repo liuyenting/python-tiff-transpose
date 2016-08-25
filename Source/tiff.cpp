@@ -263,11 +263,9 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
 
     // Identify the read mode.
 	static char mode[3] = { 'x', 'b', 0 };
+    // Overwrite on the first run, and append for rest of the page.
     mode[0] = (mode[0] == 'x') ? 'w' : 'a';
     mode[1] = (TIFFIsBigEndian(in)) ? 'b' : 'l';
-
-    std::cout << "Layer " << iLayer << ", ";
-    std::cout << ((mode[0] == 'a') ? "Append" : "Overwrite") << std::endl;
 
 	// Iterate through the directories.
 	int iFile = 0;
@@ -276,20 +274,21 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
 		out = TIFFOpen(s.c_str(), mode);
         try {
     		if (out == NULL) {
-    			std::cerr << "Unable to create output file" << std::endl;
-                (void) TIFFClose(in);
-                (void) TIFFClose(out);
-    			return;
+                throw -1;
     		} else if (!cpTiff(in, out, iLayer, nLayer)) {
-    			std::cerr << "Unable to copy the layer" << std::endl;
-                (void) TIFFClose(in);
-                (void) TIFFClose(out);
-    			return;
+                throw -2;
     		}
         } catch (int e) {
+            if (e == -1) {
+                std::cerr << "Unable to create output file" << std::endl;
+            } else if (e == -2) {
+                std::cerr << "Unable to copy the layer" << std::endl;
+            } else {
+                std::cerr << "Unknown error" << std::endl;
+            }
             TIFFClose(in);
             TIFFClose(out);
-
+            return;
         }
 		TIFFClose(out);
 		iFile++;

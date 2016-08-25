@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <conio.h>		// _kbhit
+#include <boost/progress.hpp>
 
 #include "files.hpp"
 #include "tiff.hpp"
@@ -10,17 +11,19 @@ inline void waitForKeypress() {
 }
 
 static void processFileList(std::vector<fs::path> &fileList,
-						    const fs::path &outdir,
+						    const fs::path &outDir,
 						    const uint16_t nLayer) {
+	boost::progress_display show_progress(fileList.size());
 	for (const fs::path &file : fileList) {
-		dealStack(outdir, "layer_", file, nLayer);
+		dealStack(outDir, "layer_", file, nLayer);
+		++show_progress;
 	}
 }
 
 static void retrieveFileList(std::vector<fs::path> &fileList,
-						 	 const fs::path &indir) {
-	std::cout << "Scanning " << indir << "... ";
- 	listTiffFiles(indir, fileList);
+						 	 const fs::path &inDir) {
+	std::cout << "Scanning " << inDir << "... ";
+ 	listTiffFiles(inDir, fileList);
  	std::cout << fileList.size() << " stack(s) found" << std::endl;
 
  	int rmCnt = sortSpimStacks(fileList);
@@ -30,15 +33,15 @@ static void retrieveFileList(std::vector<fs::path> &fileList,
 }
 
 int main(void) {
-	fs::path p("G:\\dummy_cell");
-	fs::path outdir("G:\\dummy_cell_out");
+	fs::path inDir("G:\\dummy_cell");
+	fs::path outDir("G:\\dummy_cell_out");
 
 	std::vector<fs::path> fileList;
-	retrieveFileList(fileList, indir);
+	retrieveFileList(fileList, inDir);
 
 	// Transposed stack will contain as much layer as the amount of stacks.
  	size_t nLayer = fileList.size();
-	processFileList(fileList, outdir, static_cast<uint16_t>(nLayer));
+	processFileList(fileList, outDir, static_cast<uint16_t>(nLayer));
 
 	waitForKeypress();
 
