@@ -46,15 +46,17 @@ static void retrieveFileList(std::vector<fs::path> &fileList,
  	listTiffFiles(inDir, fileList);
  	std::cout << fileList.size() << " stack(s) found" << std::endl;
 
+	std::cout << "Sorting the file sequence... ";
  	int rmCnt = sortSpimStacks(fileList);
  	if (rmCnt > 0) {
- 		std::cout << "... " << rmCnt << " file(s) removed from the list" << std::endl;
+ 		std::cout << rmCnt << " file(s) removed from the list";
  	}
+	std::cout << std::endl;
 }
 
 int main(void) {
-	fs::path inDir("G:\\dummy_cell");
-	fs::path outDir("G:\\dummy_cell_out");
+	fs::path inDir("G:\\cell1_ER_zp4um");
+	fs::path outDir("G:\\er_trans_test");
 
 	std::vector<fs::path> fileList;
 	retrieveFileList(fileList, inDir);

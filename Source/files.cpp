@@ -46,12 +46,10 @@ void listTiffFiles(const fs::path &root, std::vector<fs::path> &ret) {
 		return;
 	}
 
-	fs::directory_iterator it(root);
 	fs::directory_iterator endit;
-	while (it != endit) {
+	for (fs::directory_iterator it(root); it != endit; ++it) {
 		if (fs::is_regular_file(*it) && isTiffFile(it->path())) {
-			ret.push_back(it->path().string());
-			++it;
+			ret.push_back(it->path());
 		}
 	}
 }
