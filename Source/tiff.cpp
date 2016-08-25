@@ -9,7 +9,7 @@
 #define ERR_SHOW false
 #endif
 
-static int cpData(TIFF *in, TIFF *out, uint32_t nrow) {
+static int cpData(TIFF *in, TIFF *out, const uint32_t nrow) {
 	tsize_t scSize = TIFFScanlineSize(in);
 	tdata_t buf = _TIFFmalloc(scSize);
 	if (!buf)
@@ -231,7 +231,7 @@ static int cpTiff(TIFF* in, TIFF* out,
     // Page number.
 	TIFFSetField(out, TIFFTAG_PAGENUMBER, iLayer, nLayer);
 
-    // Rest of the tags, directly copy them. 
+    // Rest of the tags, directly copy them.
 	for (struct defTagList *t = tags; t < &tags[NTAGS]; t++)
 		CopyTag(t->tag, t->count,t->type);
 
@@ -252,7 +252,7 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
                const fs::path &imgPath,
                const uint16_t nLayer) {
 	TIFF *in, *out;
-    static unsigned short iLayer = 0;
+    static uint16_t iLayer = 0;
 
 	// Open the file.
 	in = TIFFOpen(imgPath.string().c_str(), "r");
@@ -274,17 +274,23 @@ void dealStack(const fs::path &outdir, const std::string &prefix,
 	do {
         std::string s = genPath(outdir, prefix, iFile);
 		out = TIFFOpen(s.c_str(), mode);
-		if (out == NULL) {
-			std::cerr << "Unable to create output file" << std::endl;
-            (void) TIFFClose(in);
-            (void) TIFFClose(out);
-			return;
-		} else if (!cpTiff(in, out, iLayer, nLayer)) {
-			std::cerr << "Unable to copy the layer" << std::endl;
-            (void) TIFFClose(in);
-            (void) TIFFClose(out);
-			return;
-		}
+        try {
+    		if (out == NULL) {
+    			std::cerr << "Unable to create output file" << std::endl;
+                (void) TIFFClose(in);
+                (void) TIFFClose(out);
+    			return;
+    		} else if (!cpTiff(in, out, iLayer, nLayer)) {
+    			std::cerr << "Unable to copy the layer" << std::endl;
+                (void) TIFFClose(in);
+                (void) TIFFClose(out);
+    			return;
+    		}
+        } catch (int e) {
+            TIFFClose(in);
+            TIFFClose(out);
+
+        }
 		TIFFClose(out);
 		iFile++;
 	} while (TIFFReadDirectory(in));
