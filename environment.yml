@@ -1,0 +1,6 @@
+name: loc
+
+dependencies:
+  - boost
+  - icu
+  - libtiff
